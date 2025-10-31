@@ -1,4 +1,4 @@
-API_ID=
-API_HASH=
-BOT_TOKEN=
-CHAT_PERSONAL=
+API_ID= #ID de la API de telegram https://my.telegram.org/auth?to=apps
+API_HASH= # HASH de la API de telegram https://my.telegram.org/auth?to=apps
+BOT_TOKEN= # Token del bot de telegram creado por el botFather https://core.telegram.org/bots abajo del todo
+CHAT_PERSONAL= # ID de tu chat en telegram. Hay varias formas, por ejemplo el uso del https://t.me/RawDataBot
