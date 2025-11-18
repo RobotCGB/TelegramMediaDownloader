@@ -2,22 +2,13 @@ from asyncio import sleep
 from pathlib import Path
 from telethon import TelegramClient, events
 import os, shutil
-import asyncio
 
 # Ponemos los identificadores de Telegram
-claves = {}
-with open("claves.txt", "r") as f:
-    for linea in f:
-        linea = linea.strip()
-        if linea and "=" in linea:
-            key, value = linea.split("=", 1)
-            claves[key.strip()] = value.strip()
+api_id = placeholder
+api_hash = "placeholder"
+bot_token = "placeholder"
+chat_personal = placeholder
 
-# Asignar variables a partir del diccionario
-api_id = int(claves.get("API_ID", 0))
-api_hash = claves.get("API_HASH", "")
-bot_token = claves.get("BOT_TOKEN", "")
-chat_personal = int(claves.get("CHAT_PERSONAL", 0))
 # Llamamos a la carpeta de descarga
 incomplete_folder = "descargas/incomplete"
 complete_folder = "descargas/complete"
@@ -42,42 +33,36 @@ downloaded = []
 downloads = {}
 errored = []
 
-sem = asyncio.Semaphore(5)
-
 async def descargarArchivos(client, event, file_name):
 # TODO: añadir sistema de semáforos para descargar por turnos y evitar fallos    
 # TODO: añadir opción de mover descargas a carpeta concreta
+    try:
+            # Mandamos un mensaje una vez ha entrado en el try antes de comenzar a descargar
+            await enviarMensaje(f"{file_name} ha sido iniciado como descarga")
 
-    async with sem:
+            # Creamos una variable path que va a contener la ruta a la carpeta destino + el nombre del archivo
+            path_incomplete = os.path.join(incomplete_folder, file_name)
 
-        try:
-                # Mandamos un mensaje una vez ha entrado en el try antes de comenzar a descargar
-                await enviarMensaje(f"{file_name} ha sido iniciado como descarga")
+            # Hacemos la descarga per se
+            path_real = await event.message.download_media(file=path_incomplete, progress_callback=progreso(event.message.id, file_name))
 
-                # Creamos una variable path que va a contener la ruta a la carpeta destino + el nombre del archivo
-                path_incomplete = os.path.join(incomplete_folder, file_name)
+            # Una vez termina, enviamos lo descargado a la carpeta de completados
+            file_real_name = os.path.basename(path_real)
 
-                # Hacemos la descarga per se
-                path_real = await event.message.download_media(file=path_incomplete, progress_callback=progreso(event.message.id, file_name))
+            path_complete = os.path.join(complete_folder, file_real_name)
 
-                # Una vez termina, enviamos lo descargado a la carpeta de completados
-                file_real_name = os.path.basename(path_real)
+            shutil.move(path_real, path_complete)
 
-                path_complete = os.path.join(complete_folder, file_real_name)
-
-                shutil.move(path_real, path_complete)
-
-                # Mandamos un mensaje una vez ha terminado la descarga y la quitamos de la cola de progreso
-                await enviarMensaje(f"{file_name} se ha descargado con exito")
-                completed = downloads.pop(event.message.id, None)
-                if completed:
-                    downloaded.append(completed)
-            
-            # En el caso de que haya ocurrido un error, nos manda un mensaje indicandolo
-        except Exception as e:
-            await client.send_message(chat_personal, f"No se pudo descargar {file_name} por culpa de {e}")
-            errored.append((event, file_name))
-
+            # Mandamos un mensaje una vez ha terminado la descarga y la quitamos de la cola de progreso
+            await enviarMensaje(f"{file_name} se ha descargado con exito")
+            completed = downloads.pop(event.message.id, None)
+            if completed:
+                downloaded.append(completed)
+        
+        # En el caso de que haya ocurrido un error, nos manda un mensaje indicandolo
+    except Exception as e:
+        await client.send_message(chat_personal, f"No se pudo descargar {file_name} por culpa de {e}")
+        errored.append((event, file_name))
 
 
 def progreso(message_id, file_name):
