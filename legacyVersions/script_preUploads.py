@@ -42,56 +42,42 @@ downloaded = []
 downloads = {}
 errored = []
 
-sem = asyncio.Semaphore(13)
+sem = asyncio.Semaphore(5)
 
 async def descargarArchivos(client, event, file_name):
+# TODO: añadir sistema de semáforos para descargar por turnos y evitar fallos    
 # TODO: añadir opción de mover descargas a carpeta concreta
 
     async with sem:
 
         try:
-            # Mandamos un mensaje una vez ha entrado en el try antes de comenzar a descargar
-            await enviarMensaje(f"{file_name} ha sido iniciado como descarga")
+                # Mandamos un mensaje una vez ha entrado en el try antes de comenzar a descargar
+                await enviarMensaje(f"{file_name} ha sido iniciado como descarga")
 
-            # Creamos una variable path que va a contener la ruta a la carpeta destino + el nombre del archivo
-            path_incomplete = os.path.join(incomplete_folder, file_name)
+                # Creamos una variable path que va a contener la ruta a la carpeta destino + el nombre del archivo
+                path_incomplete = os.path.join(incomplete_folder, file_name)
 
-            # Hacemos la descarga per se
-            path_real = await event.message.download_media(file=path_incomplete, progress_callback=progreso(event.message.id, file_name))
+                # Hacemos la descarga per se
+                path_real = await event.message.download_media(file=path_incomplete, progress_callback=progreso(event.message.id, file_name))
 
-            # Una vez termina, enviamos lo descargado a la carpeta de completados
-            file_real_name = os.path.basename(path_real)
+                # Una vez termina, enviamos lo descargado a la carpeta de completados
+                file_real_name = os.path.basename(path_real)
 
-            path_complete = os.path.join(complete_folder, file_real_name)
+                path_complete = os.path.join(complete_folder, file_real_name)
 
-            shutil.move(path_real, path_complete)
+                shutil.move(path_real, path_complete)
 
-            # Mandamos un mensaje una vez ha terminado la descarga y la quitamos de la cola de progreso
-            await enviarMensaje(f"{file_name} se ha descargado con exito")
-            completed = downloads.pop(event.message.id, None)
-            if completed:
-                downloaded.append(completed)
-        
-        # En el caso de que haya ocurrido un error, nos manda un mensaje indicandolo
+                # Mandamos un mensaje una vez ha terminado la descarga y la quitamos de la cola de progreso
+                await enviarMensaje(f"{file_name} se ha descargado con exito")
+                completed = downloads.pop(event.message.id, None)
+                if completed:
+                    downloaded.append(completed)
+            
+            # En el caso de que haya ocurrido un error, nos manda un mensaje indicandolo
         except Exception as e:
             await client.send_message(chat_personal, f"No se pudo descargar {file_name} por culpa de {e}")
             errored.append((event, file_name))
 
-
-async def descargarCarpeta(folder_path):
-        
-        await enviarMensaje("CARPETA " + folder_path)
-
-        for file_name in os.listdir(folder_path):
-
-            file_path = os.path.join(folder_path, file_name)
-
-            if os.path.isfile(file_path):
-                await client.send_file(chat_personal, file_path, caption=file_name)
-            else:
-                await descargarCarpeta(file_path)
-
-        await enviarMensaje("SALIENDO DE CARPETA " + folder_path)
 
 
 def progreso(message_id, file_name):
@@ -199,17 +185,12 @@ async def handler(event):
             await enviarMensaje(msj)
             for event, file_name in copy_errored:
                 await descargarArchivos(client, event, file_name)
+                
+            
+            
+
         else:
             await enviarMensaje("No hay descargas recientemente falladas")
-
-    elif isMessageText(event, "uploadFolder"):
-
-        upload_folder = "./uploads"
-
-        await descargarCarpeta(upload_folder)
-            
-            
-        
     
     elif isMessageText(event, "help"):
         msj = "Puedes escribirme los siguientes mensajes para que haga cosas:\n\n"
@@ -228,7 +209,6 @@ async def handler(event):
         msj += "* ordenarErrores : Ordena la lista de errores"
         msj += "* limpiezaErrores : Borra la lista que tengas en errores\n\n"
         msj += "* reintentarErrores : Reintenta aquellas descargas que forman parte de la lista de errores\n\n"
-        msj += "* uploadFolder : Sube al chat de telegram todo lo contenido en la carpeta \"upload\""
         msj += "* alive? : Te responde si sigue en funcionamiento\n\n"
         msj += "* help : EJEM EJEM\n\n"
         msj += "* kill : termina el proceso remoto"
