@@ -3,6 +3,7 @@ from pathlib import Path
 from telethon import TelegramClient, events
 import os, shutil
 import asyncio
+import subprocess
 
 # Ponemos los identificadores de Telegram
 claves = {}
@@ -42,6 +43,8 @@ downloaded = []
 downloads = {}
 errored = []
 
+tamanoMAXTelegram = 1900
+
 sem = asyncio.Semaphore(13)
 
 async def descargarArchivos(client, event, file_name):
@@ -78,23 +81,68 @@ async def descargarArchivos(client, event, file_name):
             errored.append((event, file_name))
 
 
-async def descargarCarpeta(folder_path):
+async def subirCarpeta(folder_path):
         
         await enviarMensaje("CARPETA " + folder_path)
 
         for file_name in os.listdir(folder_path):
 
             file_path = os.path.join(folder_path, file_name)
+            real_path = os.path.realpath(file_path)
 
-            if os.path.isfile(file_path):
-                await client.send_file(chat_personal, file_path, caption=file_name)
-            else:
-                await descargarCarpeta(file_path)
+            if os.path.isfile(real_path):
+                size = os.path.getsize(real_path)
+                if size == 0:
+                    continue
+
+                if size > tamanoMAXTelegram:
+                    size = os.path.getsize(real_path)
+                    await enviarMensaje(real_path + " : " + sizeof_fmt(size))
+                    partes = partirArchivoGrande(real_path)
+                    await enviarMensaje(f"Partes creadas: {len(partes)}")
+                    for parte in partes:
+                        parte_name = os.path.basename(parte)
+                        size = os.path.getsize(parte)
+                        await enviarMensaje(parte_name + " : " + sizeof_fmt(size))
+                        await client.send_file(chat_personal, parte, caption=parte_name)
+                        os.remove(parte)
+                else:
+                    size = os.path.getsize(real_path)
+                    await enviarMensaje(real_path + " : " + str(size))
+                    await client.send_file(chat_personal, real_path, caption=file_name)
+            elif os.path.isdir(real_path):
+                    await subirCarpeta(real_path)
+                
 
         await enviarMensaje("SALIENDO DE CARPETA " + folder_path)
 
+def partirArchivoGrande(path, tamano_parte_mb=1900):
+    tamano_parte = f"-v{tamano_parte_mb}m"
+    base_name = os.path.basename(path)
+    dir_name = os.path.dirname(path)
+    out_7z = os.path.join(dir_name, base_name + ".7z")
+
+    cmd = [ "7z", "a", tamano_parte, out_7z, path ]
+
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+    if result.returncode != 0:
+        raise RuntimeError(f"Error ejecutando 7z:\n{result.stderr}")
+    
+    partes = []
+    i = 1
+    while True:
+        parte_path = f"{out_7z}.{i:03d}"
+        if os.path.exists(parte_path):
+            partes.append(parte_path)
+            i+=1
+        else:
+            break
+
+    return partes
 
 def progreso(message_id, file_name):
+    
     def callback(current, total):
         downloads[message_id] = (current, total, file_name)
     return callback
@@ -206,7 +254,7 @@ async def handler(event):
 
         upload_folder = "./uploads"
 
-        await descargarCarpeta(upload_folder)
+        await subirCarpeta(upload_folder)
             
             
         
@@ -225,10 +273,10 @@ async def handler(event):
         msj += "* limpiezaErrores : Borra la lista que tengas de errores\n\n"
         msj += "* ordenarDescargas : Ordena la lista de descargas\n\n"
         msj += "* ordenarCompletados : Ordena la lista de completados\n\n"
-        msj += "* ordenarErrores : Ordena la lista de errores"
+        msj += "* ordenarErrores : Ordena la lista de errores\n\n"
         msj += "* limpiezaErrores : Borra la lista que tengas en errores\n\n"
         msj += "* reintentarErrores : Reintenta aquellas descargas que forman parte de la lista de errores\n\n"
-        msj += "* uploadFolder : Sube al chat de telegram todo lo contenido en la carpeta \"upload\""
+        msj += "* uploadFolder : Sube al chat de telegram todo lo contenido en la carpeta \"upload\"\n\n"
         msj += "* alive? : Te responde si sigue en funcionamiento\n\n"
         msj += "* help : EJEM EJEM\n\n"
         msj += "* kill : termina el proceso remoto"
