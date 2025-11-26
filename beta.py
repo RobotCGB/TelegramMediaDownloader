@@ -43,7 +43,7 @@ downloaded = []
 downloads = {}
 errored = []
 
-tamanoMAXTelegram = 1900
+tamanoMAXTelegram = 1900 * 1024 * 1024 # 1900MB
 
 sem = asyncio.Semaphore(13)
 
