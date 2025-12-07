@@ -80,6 +80,45 @@ async def descargarArchivos(client, event, file_name):
             await client.send_message(chat_personal, f"No se pudo descargar {file_name} por culpa de {e}")
             errored.append((event, file_name))
 
+# Para que telegram permita la previsualización de los videos subidos, voy a cambiar la extensión de todos los archivos en formatos de video a mp4
+# Parece que está obsoleto por el momento. Se consigue lo mismo añadiendo el parámetro supports_streaming=True en client.send_file para conseguir lo mismo
+# sin tocar el tipo de archivo
+async def preProcesadoVideos(real_path):
+
+    base, ext = os.path.splitext(real_path)
+    extension = ext.lstrip('.').lower()
+
+    actual_path = real_path
+
+    if extension == "mkv":
+        nuevo_path = base + ".mp4"
+        if os.path.exists(nuevo_path):
+            os.remove(nuevo_path)
+        shutil.move(real_path, nuevo_path)
+        actual_path = nuevo_path
+        await enviarMensaje("El archivo original era mkv, se renombrará la extensión a mp4")
+
+    elif extension == "avi":
+        nuevo_path = base + ".mp4"
+        # si ya existe el destino, lo eliminamos para evitar errores de ffmpeg
+        if os.path.exists(nuevo_path):
+            os.remove(nuevo_path)
+        
+        await enviarMensaje("El archivo original era avi, se convertirá a mp4")
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", real_path,
+            "-c:v", "copy",
+            "-c:a", "copy",
+            nuevo_path
+        ]
+
+        # Llamamos a ffmpeg 
+        completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)    
+        actual_path = nuevo_path
+
+    return actual_path
 
 async def subirCarpeta(folder_path):
         
@@ -109,7 +148,7 @@ async def subirCarpeta(folder_path):
                 else:
                     size = os.path.getsize(real_path)
                     await enviarMensaje(real_path + " : " + sizeof_fmt(size))
-                    await client.send_file(chat_personal, real_path, caption=file_name)
+                    await client.send_file(chat_personal, real_path, caption=file_name, supports_streaming=True)
             elif os.path.isdir(real_path):
                     await subirCarpeta(real_path)
                 
