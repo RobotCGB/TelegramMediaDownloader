@@ -130,25 +130,27 @@ async def subirCarpeta(folder_path):
             real_path = os.path.realpath(file_path)
 
             if os.path.isfile(real_path):
-                size = os.path.getsize(real_path)
-                if size == 0:
-                    continue
+                base, ext = os.path.splitext(real_path)
+                if ext != ".nfo":
+                    size = os.path.getsize(real_path)
+                    if size == 0:
+                        continue
 
-                if size > tamanoMAXTelegram:
-                    size = os.path.getsize(real_path)
-                    await enviarMensaje(real_path + " : " + sizeof_fmt(size))
-                    partes = partirArchivoGrande(real_path)
-                    await enviarMensaje(f"Partes creadas: {len(partes)}")
-                    for parte in partes:
-                        parte_name = os.path.basename(parte)
-                        size = os.path.getsize(parte)
-                        await enviarMensaje(parte_name + " : " + sizeof_fmt(size))
-                        await client.send_file(chat_personal, parte, caption=parte_name)
-                        os.remove(parte)
-                else:
-                    size = os.path.getsize(real_path)
-                    await enviarMensaje(real_path + " : " + sizeof_fmt(size))
-                    await client.send_file(chat_personal, real_path, caption=file_name, supports_streaming=True)
+                    if size > tamanoMAXTelegram:
+                        size = os.path.getsize(real_path)
+                        await enviarMensaje(real_path + " : " + sizeof_fmt(size))
+                        partes = partirArchivoGrande(real_path)
+                        await enviarMensaje(f"Partes creadas: {len(partes)}")
+                        for parte in partes:
+                            parte_name = os.path.basename(parte)
+                            size = os.path.getsize(parte)
+                            await enviarMensaje(parte_name + " : " + sizeof_fmt(size))
+                            await client.send_file(chat_personal, parte, caption=parte_name)
+                            os.remove(parte)
+                    else:
+                        size = os.path.getsize(real_path)
+                        await enviarMensaje(real_path + " : " + sizeof_fmt(size))
+                        await client.send_file(chat_personal, real_path, caption=file_name, supports_streaming=True)
             elif os.path.isdir(real_path):
                     await subirCarpeta(real_path)
                 
