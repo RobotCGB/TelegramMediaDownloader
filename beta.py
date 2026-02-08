@@ -4,6 +4,9 @@ from telethon import TelegramClient, events
 import os, shutil
 import asyncio
 import subprocess
+from telethon import Button
+ 
+
 
 # Ponemos los identificadores de Telegram
 claves = {}
@@ -203,11 +206,138 @@ async def enviarMensaje(msj):
 def isMessageText(event, text):
     return event.text and event.text == text
 
+
+# Gestion del menu
+
+
+MENU_PRINCIPAL = [
+    [Button.text("Menu descargas")],
+    [Button.text("Menu uploads")],
+    [Button.text("Limpieza")],
+    [Button.text("Tools")],
+    [Button.text("Salir")]
+]
+
+MENU_DESCARGAS = [
+    [Button.text("progreso")],
+    [Button.text("completados")],
+    [Button.text("errores")],
+    [Button.text("reintentarErrores")],
+    [Button.text("Ordenar")],
+    [Button.text("Volver al menu principal")]
+]
+
+MENU_ORDENAR = [
+    [Button.text("ordenarDescargas")],
+    [Button.text("ordenarCompletados")],
+    [Button.text("Volver al menu descargas")]
+]
+
+MENU_TOOLS = [
+    [Button.text("alive?")],
+    [Button.text("help")],
+    [Button.text("kill")],
+    [Button.text("Volver al menu principal")]
+]
+
+@client.on(events.NewMessage(pattern='/start'))
+async def start(event):
+    await event.respond(
+        "Menu Principal:",
+        buttons=[
+            [Button.text("Menu descargas")],
+            [Button.text("Menu uploads")],
+            [Button.text("Limpieza")],
+            [Button.text("Tools")],
+            [Button.text("Salir")]
+        ]
+    )
+    
+
+@client.on(events.NewMessage)
+async def menu_handler(event):
+
+
+    if isMessageText(event, "Menu descargas"):
+        await event.respond(
+            "Elige opción de descargas:",
+            buttons=MENU_DESCARGAS
+        )
+
+    if isMessageText(event, "Ordenar"):
+        await event.respond(
+            "Elige opción de ordenacion:",
+            buttons=MENU_ORDENAR
+        )
+
+    if isMessageText(event, "Menu uploads"):
+        await event.respond(
+            "Elige opción de uploads:",
+            buttons=[
+                [Button.text("uploadFolder")],
+                [Button.text("Volver al menu principal")]
+            ]
+        )
+
+    if isMessageText(event, "Limpieza"):
+        await event.respond(
+            "Elige opción de limpieza:",
+            buttons=[
+                [Button.text("limpiezaCompletados")],
+                [Button.text("limpiezaErrores")],
+                [Button.text("Volver al menu principal")]
+            ]
+        )
+
+    if isMessageText(event, "Tools"):
+        await event.respond(
+            "Elige la herramineta:",
+            buttons=MENU_TOOLS
+        )
+
+    if isMessageText(event, "Volver al menu principal"):
+        await event.respond(
+            "Elige una opción", 
+            buttons=MENU_PRINCIPAL
+        )
+
+    if isMessageText(event, "Volver al menu descargas"):
+        await event.respond(
+            "Elige opción de descargas:",
+            buttons=MENU_DESCARGAS
+        )
+
+    if isMessageText(event, "Salir"):
+
+        await event.respond(
+            "¿Seguro/a?",
+            buttons=[
+                [Button.text("Si")],
+                [Button.text("Volver al menu principal")]
+            ]
+        )
+
+    if isMessageText(event, "Si"):
+        exit()
+
+
+@client.on(events.NewMessage(pattern='/limpiar'))
+async def limpiar_chat(event):
+    chat = await event.get_chat()
+    # Borrar últimos 100 mensajes (puede variar)
+    msgs = await client.get_messages(chat, limit=100)
+    ids = [msg.id for msg in msgs]
+    
+    await client.delete_messages(chat, ids)
+    await event.respond("Chat limpiado!")
+
 # Comenzamos a escuchar desde el cliente recien creado todos los mensajes entrantes
 @client.on(events.NewMessage)
 async def handler(event):
 
     global downloads
+
+
 
     # Solo en el caso de que el mensaje nuevo sea media, se intenta descargar
     if event.message.media:
