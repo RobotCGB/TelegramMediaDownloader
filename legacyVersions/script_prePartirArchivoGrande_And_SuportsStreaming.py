@@ -80,54 +80,6 @@ async def descargarArchivos(client, event, file_name):
             await client.send_message(chat_personal, f"No se pudo descargar {file_name} por culpa de {e}")
             errored.append((event, file_name))
 
-# Para que telegram permita la previsualización de los videos subidos, voy a cambiar la extensión de todos los archivos en formatos de video a mp4
-# Parece que está obsoleto por el momento. Se consigue lo mismo añadiendo el parámetro supports_streaming=True en client.send_file para conseguir lo mismo
-# sin tocar el tipo de archivo
-"""
-async def preProcesadoVideos(real_path):
-
-    base, ext = os.path.splitext(real_path)
-    extension = ext.lstrip('.').lower()
-
-    actual_path = real_path
-
-    if extension == "mkv":
-        nuevo_path = base + ".mp4"
-        if os.path.exists(nuevo_path):
-            os.remove(nuevo_path)
-        shutil.move(real_path, nuevo_path)
-        actual_path = nuevo_path
-        await enviarMensaje("El archivo original era mkv, se renombrará la extensión a mp4")
-
-    elif extension == "avi":
-        nuevo_path = base + ".mp4"
-        # si ya existe el destino, lo eliminamos para evitar errores de ffmpeg
-        if os.path.exists(nuevo_path):
-            os.remove(nuevo_path)
-        
-        await enviarMensaje("El archivo original era avi, se convertirá a mp4")
-
-        cmd = [
-            "ffmpeg", "-y",
-            "-i", real_path,
-            "-c:v", "copy",
-            "-c:a", "copy",
-            nuevo_path
-        ]
-
-        # Llamamos a ffmpeg 
-        completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)    
-        actual_path = nuevo_path
-
-    return actual_path
-"""
-
-# subirCarpeta itera sobre la carpeta "uploads", que se puede cambiar si cambiamos la variable folder_path.
-# Por cada entrada de directorio que contega se comprueba si esta es un archivo o un directorio. En el caso de
-# ser un directorio, repite lo mismo con el folder_path como la carpeta contenedora, subiendo todo lo que haya dentro de las carpetas.
-# Si la entrada es un archivo, lo sube, no sin antes comprobar que el tamaño del archivo está dentro de los límites
-# de telegram. Si no lo está lo divide en tantas partes de 2GB (o el limite que tenga telegram en el momento) como
-# sean necesarias para subir el contenido. Lo hace, y luego si ha dividido, borra las partes para dejar espacio en el disco.
 
 async def subirCarpeta(folder_path):
         
@@ -139,27 +91,25 @@ async def subirCarpeta(folder_path):
             real_path = os.path.realpath(file_path)
 
             if os.path.isfile(real_path):
-                base, ext = os.path.splitext(real_path)
-                if ext != ".nfo":
-                    size = os.path.getsize(real_path)
-                    if size == 0:
-                        continue
+                size = os.path.getsize(real_path)
+                if size == 0:
+                    continue
 
-                    if size > tamanoMAXTelegram:
-                        size = os.path.getsize(real_path)
-                        await enviarMensaje(real_path + " : " + sizeof_fmt(size))
-                        partes = partirArchivoGrande(real_path)
-                        await enviarMensaje(f"Partes creadas: {len(partes)}")
-                        for parte in partes:
-                            parte_name = os.path.basename(parte)
-                            size = os.path.getsize(parte)
-                            await enviarMensaje(parte_name + " : " + sizeof_fmt(size))
-                            await client.send_file(chat_personal, parte, caption=parte_name)
-                            os.remove(parte)
-                    else:
-                        size = os.path.getsize(real_path)
-                        await enviarMensaje(real_path + " : " + sizeof_fmt(size))
-                        await client.send_file(chat_personal, real_path, caption=file_name, supports_streaming=True) #supports_streming=True te deja previsualizar videos en la app. Creo que no se puede de otra manera desde cliente ;)
+                if size > tamanoMAXTelegram:
+                    size = os.path.getsize(real_path)
+                    await enviarMensaje(real_path + " : " + sizeof_fmt(size))
+                    partes = partirArchivoGrande(real_path)
+                    await enviarMensaje(f"Partes creadas: {len(partes)}")
+                    for parte in partes:
+                        parte_name = os.path.basename(parte)
+                        size = os.path.getsize(parte)
+                        await enviarMensaje(parte_name + " : " + sizeof_fmt(size))
+                        await client.send_file(chat_personal, parte, caption=parte_name)
+                        os.remove(parte)
+                else:
+                    size = os.path.getsize(real_path)
+                    await enviarMensaje(real_path + " : " + sizeof_fmt(size))
+                    await client.send_file(chat_personal, real_path, caption=file_name)
             elif os.path.isdir(real_path):
                     await subirCarpeta(real_path)
                 
@@ -319,9 +269,6 @@ async def handler(event):
         #TODO: msj += "* descancelar [id] : Reinicia la descarga cancelada indicada por id"
         #TODO: msj += "* pausa [id] : Pausa la descarga indicada por id"
         #TODO: msj += "* reanuda [id] : Reanuda la descarga pausada indicada por id"
-        #TODO: msj += "* reiniciaScript: Para el bot y vuelve a conectar la ultima beta. Util para probar nuevas funcionalidades"
-        #TODO: msj += "* "
-        #TODO: msj += "* "
         msj += "* limpiezaCompletados : Borra la lista que tengas de completados\n\n"
         msj += "* limpiezaErrores : Borra la lista que tengas de errores\n\n"
         msj += "* ordenarDescargas : Ordena la lista de descargas\n\n"
@@ -342,6 +289,6 @@ async def handler(event):
     elif isMessageText(event, "alive?"):
         await enviarMensaje("Aqui estoy bb")
 
-# Si lo estamos ejecutando desde terminal, nos muestra que todo va bien y que está esperando los mensajes
+# Si lo estamos ejecutando desde terminal, nos muestra que todo va bien y que está esperando los mensaj>
 print("Bot escuchando mensajes nuevos...")
 client.run_until_disconnected()
