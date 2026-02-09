@@ -2,7 +2,7 @@
 
 ## ¿Como configurar las claves?
 
-1º Renombra el archivo claves_plantilla.txt
+1º Renombra el archivo claves_plantilla.txt a claves.txt
 
 2º Añade las variables correspondientes siguiendo las instrucciones:
 

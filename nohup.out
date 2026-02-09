@@ -478,3 +478,30 @@ Traceback (most recent call last):
     exit()
   File "<frozen _sitebuiltins>", line 26, in __call__
 SystemExit: None
+Traceback (most recent call last):
+  File "/mnt/Mirror/TelegramBot/TelegramMediaDownloader/script.py", line 3, in <module>
+    from telethon import TelegramClient, events
+ModuleNotFoundError: No module named 'telethon'
+Bot escuchando mensajes nuevos...
+Task exception was never retrieved
+future: <Task finished name='Task-26' coro=<UpdateMethods._dispatch_update() done, defined at /mnt/Mirror/TelegramBot/TelegramMediaDownloader/venvTelegram/lib/python3.12/site-packages/telethon/client/updates.py:525> exception=SystemExit(None)>
+Traceback (most recent call last):
+  File "/mnt/Mirror/TelegramBot/TelegramMediaDownloader/script.py", line 477, in <module>
+    client.run_until_disconnected()
+  File "/mnt/Mirror/TelegramBot/TelegramMediaDownloader/venvTelegram/lib/python3.12/site-packages/telethon/client/updates.py", line 96, in run_until_disconnected
+    return self.loop.run_until_complete(self._run_until_disconnected())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 674, in run_until_complete
+    self.run_forever()
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 641, in run_forever
+    self._run_once()
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 1987, in _run_once
+    handle._run()
+  File "/usr/lib/python3.12/asyncio/events.py", line 88, in _run
+    self._context.run(self._callback, *self._args)
+  File "/mnt/Mirror/TelegramBot/TelegramMediaDownloader/venvTelegram/lib/python3.12/site-packages/telethon/client/updates.py", line 574, in _dispatch_update
+    await callback(event)
+  File "/mnt/Mirror/TelegramBot/TelegramMediaDownloader/script.py", line 321, in menu_handler
+    exit()
+  File "<frozen _sitebuiltins>", line 26, in __call__
+SystemExit: None

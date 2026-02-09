@@ -1,6 +1,6 @@
 bot_session.session
 claves.txt
 nohup.out
-uploads/*
+uploads/
 pruebaDeConcepto.py
-venvTelegram/*
+venvTelegram/
