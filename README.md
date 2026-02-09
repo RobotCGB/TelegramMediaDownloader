@@ -1,5 +1,19 @@
 # Telegram Media Downloader (TMD)
 
+## Instalar dependencias
+
+Primero creamos el entorno virtual:
+
+`python3 -m venv venvTelegram`
+
+Accedemos a el entorno:
+
+`source venvTelegram/bin/activate`
+
+Instalamos las dependecias:
+
+`python3 -m pip install -r requirements.txt`
+
 ## ¿Como configurar las claves?
 
 1º Renombra el archivo claves_plantilla.txt a claves.txt
