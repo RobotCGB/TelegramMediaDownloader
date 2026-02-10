@@ -1,10 +1,13 @@
 from asyncio import sleep
 from pathlib import Path
-from telethon import TelegramClient, events, Button
+from telethon import TelegramClient, events
 import os, shutil
 import asyncio
 import subprocess
+from telethon import Button
  
+
+
 # Ponemos los identificadores de Telegram
 claves = {}
 with open("claves.txt", "r") as f:
@@ -42,16 +45,15 @@ def sizeof_fmt(num, suffix="B"):
 downloaded = []
 downloads = {}
 errored = []
-uploads = {}
 
 tamanoMAXTelegram = 1900 * 1024 * 1024 # 1900MB
 
-sem_downloads = asyncio.Semaphore(13)
+sem = asyncio.Semaphore(13)
 
 async def descargarArchivos(client, event, file_name):
 # TODO: añadir opción de mover descargas a carpeta concreta
 
-    async with sem_downloads:
+    async with sem:
 
         try:
             # Mandamos un mensaje una vez ha entrado en el try antes de comenzar a descargar
@@ -130,44 +132,42 @@ async def preProcesadoVideos(real_path):
 # de telegram. Si no lo está lo divide en tantas partes de 2GB (o el limite que tenga telegram en el momento) como
 # sean necesarias para subir el contenido. Lo hace, y luego si ha dividido, borra las partes para dejar espacio en el disco.
 
-# sem_uploads = asyncio.Semaphore(13) TODO: Añadir concurrencia en las subidas
+async def subirCarpeta(folder_path):
+        
+        await enviarMensaje("CARPETA " + folder_path)
 
-async def subirCarpeta(folder_path, event):
+        for file_name in os.listdir(folder_path):
 
-    await enviarMensaje("CARPETA " + folder_path)
+            file_path = os.path.join(folder_path, file_name)
+            real_path = os.path.realpath(file_path)
 
-    for file_name in os.listdir(folder_path):
-
-        file_path = os.path.join(folder_path, file_name)
-        real_path = os.path.realpath(file_path)
-
-        if os.path.isfile(real_path):
-            base, ext = os.path.splitext(real_path)
-            if ext != ".nfo":
-                size = os.path.getsize(real_path)
-                if size == 0:
-                    continue
-
-                if size > tamanoMAXTelegram:
+            if os.path.isfile(real_path):
+                base, ext = os.path.splitext(real_path)
+                if ext != ".nfo":
                     size = os.path.getsize(real_path)
-                    await enviarMensaje(real_path + " : " + sizeof_fmt(size))
-                    partes = partirArchivoGrande(real_path)
-                    await enviarMensaje(f"Partes creadas: {len(partes)}")
-                    for parte in partes:
-                        parte_name = os.path.basename(parte)
-                        size = os.path.getsize(parte)
-                        await enviarMensaje(parte_name + " : " + sizeof_fmt(size))
-                        await client.send_file(chat_personal, parte, caption=parte_name, progress_callback=progresoUploads(event.message.id, parte_name))
-                        os.remove(parte)
-                else:
-                    size = os.path.getsize(real_path)
-                    await enviarMensaje(real_path + " : " + sizeof_fmt(size))
-                    await client.send_file(chat_personal, real_path, caption=file_name, supports_streaming=True, progress_callback=progresoUploads(event.message.id, file_name)) #supports_streming=True te deja previsualizar videos en la app. Creo que no se puede de otra manera desde cliente ;)
-        elif os.path.isdir(real_path):
-                await subirCarpeta(real_path, event)
-            
+                    if size == 0:
+                        continue
 
-    await enviarMensaje("SALIENDO DE CARPETA " + folder_path)
+                    if size > tamanoMAXTelegram:
+                        size = os.path.getsize(real_path)
+                        await enviarMensaje(real_path + " : " + sizeof_fmt(size))
+                        partes = partirArchivoGrande(real_path)
+                        await enviarMensaje(f"Partes creadas: {len(partes)}")
+                        for parte in partes:
+                            parte_name = os.path.basename(parte)
+                            size = os.path.getsize(parte)
+                            await enviarMensaje(parte_name + " : " + sizeof_fmt(size))
+                            await client.send_file(chat_personal, parte, caption=parte_name)
+                            os.remove(parte)
+                    else:
+                        size = os.path.getsize(real_path)
+                        await enviarMensaje(real_path + " : " + sizeof_fmt(size))
+                        await client.send_file(chat_personal, real_path, caption=file_name, supports_streaming=True) #supports_streming=True te deja previsualizar videos en la app. Creo que no se puede de otra manera desde cliente ;)
+            elif os.path.isdir(real_path):
+                    await subirCarpeta(real_path)
+                
+
+        await enviarMensaje("SALIENDO DE CARPETA " + folder_path)
 
 def partirArchivoGrande(path, tamano_parte_mb=1900):
     tamano_parte = f"-v{tamano_parte_mb}m"
@@ -199,12 +199,6 @@ def progreso(message_id, file_name):
     def callback(current, total):
         downloads[message_id] = (current, total, file_name)
     return callback
-
-def progresoUploads(message_id, file_name):
-    
-    def callbackUploads(current, total):
-        uploads[message_id] = (current, total, file_name)
-    return callbackUploads
 
 async def enviarMensaje(msj):
     await client.send_message(chat_personal, msj)
@@ -281,7 +275,6 @@ async def menu_handler(event):
             "Elige opción de uploads:",
             buttons=[
                 [Button.text("uploadFolder")],
-                [Button.text("progresoUploads")],
                 [Button.text("Volver al menu principal")]
             ]
         )
@@ -343,7 +336,7 @@ async def limpiar_chat(event):
 async def handler(event):
 
     global downloads
-    global uploads
+
 
 
     # Solo en el caso de que el mensaje nuevo sea media, se intenta descargar
@@ -372,19 +365,6 @@ async def handler(event):
         else:
             await enviarMensaje("No hay descargas en curso.")
     
-    elif isMessageText(event, "progresoUploads"):
-        if uploads:
-            msg = "Subidas en proceso:\n\n"
-
-            for msg_id, (current, total, name) in uploads.items():
-                porcentaje = (current / total) * 100 if total else 0
-                msg += f"* {name}: {porcentaje:.2f}%\n"
-                msg += f"{sizeof_fmt(current)} / {sizeof_fmt(total)}\n\n"
-            await enviarMensaje(msg)
-        else:
-            await enviarMensaje("No hay subidas en curso.")
-    
-
     elif isMessageText(event, "completados"):
         if downloaded:
             msj = "Han sido completadas:\n\n"
@@ -454,7 +434,7 @@ async def handler(event):
 
         upload_folder = "./uploads"
 
-        await subirCarpeta(upload_folder, event)
+        await subirCarpeta(upload_folder)
             
             
         
