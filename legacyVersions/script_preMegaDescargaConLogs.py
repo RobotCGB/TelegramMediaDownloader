@@ -4,10 +4,7 @@ from telethon import TelegramClient, events, Button
 import os, shutil
 import asyncio
 import subprocess
-import re
-from collections import deque
-
-
+ 
 # Ponemos los identificadores de Telegram
 claves = {}
 with open("claves.txt", "r") as f:
@@ -25,8 +22,6 @@ chat_personal = int(claves.get("CHAT_PERSONAL", 0))
 # Llamamos a la carpeta de descarga
 incomplete_folder = "descargas/incomplete"
 complete_folder = "descargas/complete"
-mega_folder = "descargas/mega"
-mega_log = "descargas/mega/mega_log.txt"
 
 # Comprobamos que nuestra carpeta exista. Si no es el caso, la crea
 os.makedirs(incomplete_folder, exist_ok=True)
@@ -217,58 +212,6 @@ async def enviarMensaje(msj):
 def isMessageText(event, text):
     return event.text and event.text == text
 
-# TODO; CHATGEPETEADO, REVISAR
-
-mega_output_buffer = deque(maxlen=10)
-
-async def mega_download(mega_link):
-    folder_arg = "--path=" + mega_folder
-
-    process = await asyncio.create_subprocess_exec(
-        "megadl",
-        folder_arg,
-        mega_link,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT
-    )
-
-    with open(mega_log, "a", encoding="utf-8") as f:
-        while True:
-            chunk = await process.stdout.read(1024)
-            if not chunk:
-                break
-
-            decoded = chunk.decode(errors="ignore").strip()
-            if decoded:
-                f.write(decoded + "\n")
-                f.flush()
-
-                if "509 (over quota)" in decoded.lower():
-                    f.write("Over quota\n")
-                    f.flush()
-
-    await process.wait()
-
-    if os.path.exists(log_file):
-        os.remove(log_file)
-
-    if process.returncode != 0:
-        raise RuntimeError("megadl falló")
-
-async def mega_log_reader():
-    last_lines = deque(maxlen=10)
-    try:
-        with open(mega_log, "r") as f:
-            for line in f:
-                last_lines.append(line.rstrip())
-    except FileNotFoundError:
-        await enviarMensaje("El log no existe todavía")
-        return
-
-    mensaje = "\n".join(last_lines) if last_lines else "Log vacío"
-
-    await enviarMensaje(mensaje)
-
 
 # Gestion del menu
 
@@ -285,7 +228,6 @@ MENU_DESCARGAS = [
     [Button.text("progreso")],
     [Button.text("completados")],
     [Button.text("errores")],
-    [Button.text("Mega")],
     [Button.text("reintentarErrores")],
     [Button.text("Ordenar")],
     [Button.text("Volver al menu principal")]
@@ -294,11 +236,6 @@ MENU_DESCARGAS = [
 MENU_ORDENAR = [
     [Button.text("ordenarDescargas")],
     [Button.text("ordenarCompletados")],
-    [Button.text("Volver al menu descargas")]
-]
-
-MENU_MEGA = [
-    [Button.text("Leer log de mega")],
     [Button.text("Volver al menu descargas")]
 ]
 
@@ -387,13 +324,6 @@ async def menu_handler(event):
             ]
         )
 
-    if isMessageText(event, "Mega"):
-
-        await event.respond(
-            "¿Seguro/a?",
-            buttons=MENU_MEGA
-        )
-
     if isMessageText(event, "Si"):
         exit()
 
@@ -415,8 +345,9 @@ async def handler(event):
     global downloads
     global uploads
 
+
     # Solo en el caso de que el mensaje nuevo sea media, se intenta descargar
-    if event.file:
+    if event.message.media:
 
         file_name = event.message.file.name
 
@@ -524,12 +455,7 @@ async def handler(event):
         upload_folder = "./uploads"
 
         await subirCarpeta(upload_folder, event)
-    
-    elif event.text and re.match(r'^https://mega\.nz/folder/.+', event.text):
-        await mega_download(event.text)
-
-    elif isMessageText(event, "Leer log de mega"):
-        await mega_log_reader()
+            
             
         
     
