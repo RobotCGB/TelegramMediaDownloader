@@ -217,7 +217,7 @@ async def enviarMensaje(msj):
 def isMessageText(event, text):
     return event.text and event.text == text
 
-# TODO; CHATGEPETEADO, REVISAR
+# REVISADO :)
 
 mega_output_buffer = deque(maxlen=10)
 
