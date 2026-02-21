@@ -469,14 +469,14 @@ async def handler(event):
     
     elif isMessageText(event, "ordenarCompletados"):
         if downloaded:
-            downloaded.sort(key=lambda x: x[1])
-            await enviarMensaje("Completados ha sido ordenado")
+            downloaded.sort(key=lambda x: x[2].lower())
+            await enviarMensaje("Completados han sido ordenados")
         else:
             await enviarMensaje("No hay nada en completados")
 
     elif isMessageText(event, "ordenarDescargas"):
         if downloads:
-            downloads = dict(sorted(downloads.items(), key=lambda item: item[1]["file_name"].lower()))
+            downloads = dict(sorted(downloads.items(), key=lambda item: item[1][2].lower()))
             await enviarMensaje("Descargas ha sido ordenado")
         else:
             await enviarMensaje("No hay nada en descargas")
