@@ -7,8 +7,6 @@ import subprocess
 import re
 from collections import deque
 
-import yt_dlp
-
 
 # Ponemos los identificadores de Telegram
 claves = {}
@@ -219,7 +217,7 @@ async def enviarMensaje(msj):
 def isMessageText(event, text):
     return event.text and event.text == text
 
-# REVISADO :)
+# TODO; CHATGEPETEADO, REVISAR
 
 mega_output_buffer = deque(maxlen=10)
 
@@ -270,42 +268,6 @@ async def mega_log_reader():
     mensaje = "\n".join(last_lines) if last_lines else "Log vacío"
 
     await enviarMensaje(mensaje)
-
-async def yt_download_music(yt_link, event, client):
-
-    process = await asyncio.create_subprocess_exec(
-        "yt-dlp",
-        "--extract-audio",
-        "--audio-format", "mp3",
-        "-o", 
-        "./descargas/complete/",
-        yt_link,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT
-    )
-
-    stdout, _ = await process.communicate()
-    print(stdout.decode())
-
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': './descargas/complete/%(title)s.%(ext)s',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-        }],
-    }
-
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(yt_link, download=True)
-        filename = ydl.prepare_filename(info)
-        filename = filename.rsplit(".", 1)[0] + ".mp3"
-
-    name_only = os.path.splitext(os.path.basename(filename))[0]
-
-    await enviarMensaje("La canción de youtube " + name_only + " se ha descargado con exito")
-    
-    await client.send_file(chat_personal, filename, caption=name_only, supports_streaming=True) 
 
 
 # Gestion del menu
@@ -568,9 +530,6 @@ async def handler(event):
 
     elif isMessageText(event, "Leer log de mega"):
         await mega_log_reader()
-
-    elif event.text and ( re.match(r'https://youtu\.be/', event.text) or re.match(r'https://youtube\.com/', event.text)):
-        await yt_download_music(event.text, event, client)
             
         
     
@@ -587,8 +546,6 @@ async def handler(event):
         #TODO: msj += "* reiniciaScript: Para el bot y vuelve a conectar la ultima beta. Util para probar nuevas funcionalidades"
         #TODO: msj += "* "
         #TODO: msj += "* "
-        msj += "* URL_MEGA : Si añades una url de mega se descargará automaticamente el contenido de la carpeta mega\n\n"
-        msj += "* URL_YOUTUBE : Si añades una url de youtube se descargará automaticamente el video en formato audio únicamente\n\n"
         msj += "* limpiezaCompletados : Borra la lista que tengas de completados\n\n"
         msj += "* limpiezaErrores : Borra la lista que tengas de errores\n\n"
         msj += "* ordenarDescargas : Ordena la lista de descargas\n\n"
