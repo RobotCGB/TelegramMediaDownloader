@@ -158,7 +158,7 @@ async def subirCarpeta(folder_path, event):
                 if size > tamanoMAXTelegram:
                     size = os.path.getsize(real_path)
                     # await enviarMensaje(real_path + " : " + sizeof_fmt(size))
-                    partes = partirArchivoGrande(real_path)
+                    partes = await partirArchivoGrande(real_path)
                     await enviarMensaje(f"Partes creadas: {len(partes)}")
                     for parte in partes:
                         parte_name = os.path.basename(parte)
@@ -176,26 +176,31 @@ async def subirCarpeta(folder_path, event):
 
     await enviarMensaje("SALIENDO DE CARPETA " + folder_path)
 
-def partirArchivoGrande(path, tamano_parte_mb=1900):
+async def partirArchivoGrande(path, tamano_parte_mb=1900):
     tamano_parte = f"-v{tamano_parte_mb}m"
     base_name = os.path.basename(path)
     dir_name = os.path.dirname(path)
     out_7z = os.path.join(dir_name, base_name + ".7z")
 
-    cmd = [ "7z", "a", tamano_parte, out_7z, path ]
+    cmd = ["7z", "a", tamano_parte, out_7z, path]
 
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    process = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
 
-    if result.returncode != 0:
-        raise RuntimeError(f"Error ejecutando 7z:\n{result.stderr}")
-    
+    if process.returncode != 0:
+        raise RuntimeError(f"Error ejecutando 7z:\n{stderr.decode(errors='ignore')}")
+
     partes = []
     i = 1
     while True:
         parte_path = f"{out_7z}.{i:03d}"
         if os.path.exists(parte_path):
             partes.append(parte_path)
-            i+=1
+            i += 1
         else:
             break
 
