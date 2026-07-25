@@ -12,7 +12,7 @@ import yt_dlp
 
 # Ponemos los identificadores de Telegram
 claves = {}
-with open("claves.txt", "r") as f:
+with open("/mnt/Mirror/TelegramBot/TelegramMediaDownloader/claves.txt", "r") as f:
     for linea in f:
         linea = linea.strip()
         if linea and "=" in linea:
@@ -35,7 +35,7 @@ os.makedirs(incomplete_folder, exist_ok=True)
 os.makedirs(complete_folder, exist_ok=True)
 
 # Comenzamos la sesión de telegram
-client = TelegramClient("bot_session", api_id, api_hash, request_retries=10, timeout=60).start(bot_token=bot_token)
+client = TelegramClient("TMD_session", api_id, api_hash, request_retries=10, timeout=60).start(bot_token=bot_token)
 
 # Coso copiado de https://stackoverflow.com/questions/1094841/get-a-human-readable-version-of-a-file-size
 # Obtener el tamaño de archivo en versión humana
@@ -157,18 +157,18 @@ async def subirCarpeta(folder_path, event):
 
                 if size > tamanoMAXTelegram:
                     size = os.path.getsize(real_path)
-                    await enviarMensaje(real_path + " : " + sizeof_fmt(size))
+                    # await enviarMensaje(real_path + " : " + sizeof_fmt(size))
                     partes = partirArchivoGrande(real_path)
                     await enviarMensaje(f"Partes creadas: {len(partes)}")
                     for parte in partes:
                         parte_name = os.path.basename(parte)
                         size = os.path.getsize(parte)
-                        await enviarMensaje(parte_name + " : " + sizeof_fmt(size))
+                        # await enviarMensaje(parte_name + " : " + sizeof_fmt(size))
                         await client.send_file(chat_personal, parte, caption=parte_name, progress_callback=progresoUploads(event.message.id, parte_name))
                         os.remove(parte)
                 else:
                     size = os.path.getsize(real_path)
-                    await enviarMensaje(real_path + " : " + sizeof_fmt(size))
+                    # await enviarMensaje(real_path + " : " + sizeof_fmt(size))
                     await client.send_file(chat_personal, real_path, caption=file_name, supports_streaming=True, progress_callback=progresoUploads(event.message.id, file_name)) #supports_streming=True te deja previsualizar videos en la app. Creo que no se puede de otra manera desde cliente ;)
         elif os.path.isdir(real_path):
                 await subirCarpeta(real_path, event)
