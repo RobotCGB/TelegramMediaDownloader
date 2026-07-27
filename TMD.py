@@ -189,10 +189,6 @@ async def partirArchivoGrande(path, tamano_parte_mb=1900):
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
-    stdout, stderr = await process.communicate()
-
-    if process.returncode != 0:
-        raise RuntimeError(f"Error ejecutando 7z:\n{stderr.decode(errors='ignore')}")
 
     partes = []
     i = 1
